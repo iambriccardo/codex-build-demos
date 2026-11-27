@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mission Photo Upload</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/upload.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Mission Photo Upload</h1>
+      <a href="/editor">Open browser editor</a>
+    </header>
+    <p class="intro">Upload the JPEG copies you saved in <strong>edited images</strong>. The receiver runs on this laptop.</p>
+    <form class="panel">
+      <label for="photos-input">Choose edited JPEGs</label>
+      <div class="actions">
+        <input id="photos-input" type="file" accept=".jpg,.jpeg" multiple required>
+        <button type="submit">Upload images</button>
+      </div>
+    </form>
+    <p id="status" role="status">Ready to receive up to three images.</p>
+    <ul id="photos" class="receipts" aria-label="Upload receipts"></ul>
+    <div class="workspace actions">
+      <button id="check-workspace" class="secondary" type="button">Check workspace</button>
+      <p id="workspace-status" role="status"></p>
+    </div>
+  </main>
+</body>
+</html>

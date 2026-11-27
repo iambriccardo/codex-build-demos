@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""Check the workshop, serve the local gallery, or replay the Mac demo."""
+
+import argparse
+import errno
+import http.client
+import json
+import subprocess
+import sys
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from threading import Thread
+
+from gallery.server import HOST, PORT, receiver
+from workshop import ORIGINALS, ROOT, SOURCES, check, digest, save_new, workspace_id
+
+
+def serve(stage_finder):
+    if stage_finder and sys.platform != "darwin":
+        raise ValueError("Finder staging is available on a Mac. Run demo serve for the browser route.")
+    with receiver() as server:
+        if stage_finder:
+            subprocess.run(["/usr/bin/open", "-g", "-a", "Finder", str(ORIGINALS)], check=True)
+        print(f"Mission Photo Upload is ready at http://{HOST}:{PORT}/", flush=True)
+        print(f"Workspace {workspace_id()} · Press Ctrl+C to stop.", flush=True)
+        server.serve_forever()
+
+
+def upload(paths):
+    with receiver(port=0) as server:
+        thread = Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
+        thread.start()
+        try:
+            for path in paths:
+                data = path.read_bytes()
+                expected = {"name": path.name, "size": len(data), "sha256": digest(data)}
+                connection = http.client.HTTPConnection(HOST, server.server_port, timeout=5)
+                try:
+                    connection.request("POST", "/upload", body=data, headers={
+                        "Origin": f"http://{HOST}:{server.server_port}",
+                        "Content-Type": "image/jpeg",
+                        "X-Demo-Filename": path.name,
+                    })
+                    response = connection.getresponse()
+                    if response.status != 200 or json.loads(response.read(4096)) != expected:
+                        raise ValueError(f"Missing or incorrect receipt for {path.name}.")
+                finally:
+                    connection.close()
+                print(f"{path.name} · {len(data):,} bytes · SHA-256 {expected['sha256']}")
+        finally:
+            server.shutdown()
+            thread.join()
+    print(f"Received {len(paths)} of {len(paths)} images.")
+
+
+def replay(photos, skip_upload):
+    if sys.platform != "darwin":
+        raise ValueError("The terminal replay needs macOS. Use the browser editor for this laptop.")
+    paths = []
+    with TemporaryDirectory(prefix=".photo-replay-", dir=ROOT) as temporary:
+        for photo in photos:
+            source = ROOT / "images" / f"{photo}.jpg"
+            staged = Path(temporary) / source.name
+            print(f"Opening {source.name}", flush=True)
+            subprocess.run(
+                ["/usr/bin/swift", str(ROOT / "edit-photo.swift"), str(source), str(staged)],
+                check=True,
+                timeout=30,
+            )
+            path = save_new(photo, staged.read_bytes())
+            paths.append(path)
+            print(f"Cropped, rotated, annotated and saved {path.name}", flush=True)
+    if skip_upload:
+        print("Upload skipped.")
+    else:
+        upload(paths)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("check", help="verify the three originals and output folder")
+    serve_command = commands.add_parser("serve", help=f"run the editor and upload page on {HOST}:{PORT}")
+    serve_command.add_argument("--finder", action="store_true", help="open this checkout’s images folder in Finder on a Mac")
+    replay_command = commands.add_parser("replay", help="run the default workflow on a Mac without a model")
+    replay_command.add_argument("photos", metavar="PHOTO", nargs="*", help="earth, moon, mars or all")
+    replay_command.add_argument("--skip-upload", action="store_true")
+    args = parser.parse_args()
+    check()
+    if args.command == "check":
+        print(f"Workspace {workspace_id()} · Earth, Moon and Mars verified · edited images ready.")
+    elif args.command == "serve":
+        serve(args.finder)
+    else:
+        photos = list(SOURCES) if args.photos == ["all"] else args.photos or ["earth", "moon"]
+        if len(set(photos)) != len(photos) or any(photo not in SOURCES for photo in photos):
+            parser.error("choose distinct photos from earth, moon, mars, or use all")
+        replay(photos, args.skip_upload)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nWorkshop receiver stopped.")
+    except OSError as error:
+        if error.errno in {errno.EADDRINUSE, 10048}:
+            sys.exit(f"Port {PORT} is busy. Stop the earlier workshop receiver before starting this one.")
+        sys.exit("Demo stopped. Check that the workshop files and the required command-line tools are available.")
+    except (http.client.HTTPException, subprocess.SubprocessError) as error:
+        sys.exit(f"Demo stopped during {type(error).__name__}. Check the terminal for details.")
+    except ValueError as error:
+        sys.exit(f"Demo stopped. {error}")

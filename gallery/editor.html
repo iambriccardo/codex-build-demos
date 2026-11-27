@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mission Photo Editor</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/editor.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Mission Photo Editor</h1>
+      <a href="/">Go to upload</a>
+    </header>
+    <p class="intro">Open a workshop sample, make your edits, then save a new JPEG before uploading it.</p>
+    <div class="editor-grid">
+      <div class="editor-controls">
+        <form id="open-form" class="panel">
+          <label for="sample">Sample photo</label>
+          <select id="sample">
+            <option value="earth">Earth</option>
+            <option value="moon">Moon</option>
+            <option value="mars">Mars</option>
+          </select>
+          <button type="submit">Open sample</button>
+        </form>
+        <fieldset class="edit">
+          <legend>Crop and rotate</legend>
+          <div class="fields">
+            <label>Left (%) <input id="left" type="number" min="0" max="95" step="any"></label>
+            <label>Right (%) <input id="right" type="number" min="0" max="95" step="any"></label>
+            <label>Top (%) <input id="top" type="number" min="0" max="95" step="any"></label>
+            <label>Bottom (%) <input id="bottom" type="number" min="0" max="95" step="any"></label>
+          </div>
+          <div class="actions">
+            <button id="crop" type="button">Apply crop</button>
+            <button id="rotate-left" class="secondary" type="button">Rotate left</button>
+            <button id="rotate-right" class="secondary" type="button">Rotate right</button>
+          </div>
+        </fieldset>
+        <fieldset class="edit">
+          <legend>Caption</legend>
+          <label for="caption">Caption text</label>
+          <input id="caption" maxlength="80">
+          <label for="corner">Caption corner</label>
+          <select id="corner">
+            <option value="left">Upper left</option>
+            <option value="right">Upper right</option>
+          </select>
+          <button id="add-caption" type="button">Add caption</button>
+        </fieldset>
+        <fieldset class="edit">
+          <legend>Extra marks</legend>
+          <div class="fields">
+            <label>Across (%) <input id="mark-x" type="number" min="15" max="85" value="54"></label>
+            <label>Down (%) <input id="mark-y" type="number" min="15" max="85" value="47"></label>
+          </div>
+          <div class="actions">
+            <button id="arrow" class="secondary" type="button">Add arrow</button>
+            <button id="outline" class="secondary" type="button">Add outline</button>
+            <button id="stroke" class="secondary" type="button">Add sample sketch</button>
+          </div>
+          <label class="sketch-option"><input id="freehand" type="checkbox"> Sketch directly on the photo</label>
+        </fieldset>
+      </div>
+      <aside>
+        <div class="actions editor-result">
+          <button id="save" type="button" disabled>Save new JPEG</button>
+          <p id="editor-status" role="status"></p>
+        </div>
+        <figure class="photo-stage">
+          <canvas role="img" aria-label="Current workshop photo" hidden></canvas>
+          <figcaption id="photo-caption">Choose a sample to get started.</figcaption>
+        </figure>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>
